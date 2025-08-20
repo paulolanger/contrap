@@ -99,8 +99,13 @@ class DataFetcher:
         """
         logger.info(f"Fetching announcements for year {year}")
         
+        # Create date range for the year
+        from datetime import datetime
+        start_date = datetime(year, 1, 1)
+        end_date = datetime(year, 12, 31)
+        
         async with ContrapAPIClient(self.api_config) as client:
-            announcements = await client.get_announcements(year)
+            announcements = await client.get_announcements(start_date, end_date, year=year)
         
         # Save to file
         self._save_to_file(announcements, "announcements", str(year))
@@ -119,8 +124,13 @@ class DataFetcher:
         """
         logger.info(f"Fetching contracts for year {year}")
         
+        # Create date range for the year
+        from datetime import datetime
+        start_date = datetime(year, 1, 1)
+        end_date = datetime(year, 12, 31)
+        
         async with ContrapAPIClient(self.api_config) as client:
-            contracts = await client.get_contracts(year)
+            contracts = await client.get_contracts(start_date, end_date, year=year)
         
         # Save to file
         self._save_to_file(contracts, "contracts", str(year))
@@ -139,10 +149,12 @@ class DataFetcher:
         """
         logger.info(f"Fetching contract modifications for year {year}")
         
-        async with ContrapAPIClient(self.api_config) as client:
-            modifications = await client.get_contract_modifications(year)
+        # Note: get_contract_modifications requires a contract_id as first parameter
+        # For now, we'll return empty list as this needs different implementation
+        logger.warning("Contract modifications fetching needs contract IDs - returning empty list")
+        modifications = []
         
-        # Save to file
+        # Save to file (even if empty)
         self._save_to_file(modifications, "modifications", str(year))
         
         return modifications
