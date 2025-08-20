@@ -89,11 +89,14 @@ if ! PGPASSWORD=$DB_PASSWORD psql -h localhost -U contrap_user -d contrap -c "\d
     print_warning "Database schema not found. Initializing..."
     
     # Find and run schema file
-    if [ -f ../database/init/01_create_schema.sql ]; then
+    if [ -f ../database/schema.sql ]; then
+        PGPASSWORD=$DB_PASSWORD psql -h localhost -U contrap_user -d contrap -f ../database/schema.sql
+        print_status "Database schema initialized"
+    elif [ -f ../database/init/01_create_schema.sql ]; then
         PGPASSWORD=$DB_PASSWORD psql -h localhost -U contrap_user -d contrap -f ../database/init/01_create_schema.sql
         print_status "Database schema initialized"
     else
-        print_error "Schema file not found at ../database/init/01_create_schema.sql"
+        print_error "Schema file not found. Looking for ../database/schema.sql or ../database/init/01_create_schema.sql"
         exit 1
     fi
 else

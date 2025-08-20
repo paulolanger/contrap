@@ -61,7 +61,7 @@ pip install -r etl/requirements.txt
 
 5. **Initialize the database schema (if not already done):**
 ```bash
-psql -h localhost -U contrap_user -d contrap -f database/init/01_create_schema.sql
+psql -h localhost -U contrap_user -d contrap -f database/schema.sql
 ```
 
 6. **Test connections first:**

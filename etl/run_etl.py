@@ -115,12 +115,15 @@ async def test_connection(args):
     api_config = APIConfig()
     try:
         async with ContrapAPIClient(api_config) as client:
-            # Try to fetch a small amount of data
-            result = await client.get_announcements(2024)
+            # Try to fetch a small amount of data from today
+            from datetime import date, timedelta
+            today = date.today()
+            yesterday = today - timedelta(days=1)
+            result = await client.get_announcements(yesterday, today)
             if result:
-                print(f"✓ API connection successful. Found {len(result)} announcements for 2024.")
+                print(f"✓ API connection successful. Found {len(result)} announcements for today.")
             else:
-                print("✓ API connection successful but no data returned.")
+                print("✓ API connection successful (no recent announcements found).")
     except Exception as e:
         print(f"✗ API connection failed: {e}")
         return 1
