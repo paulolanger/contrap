@@ -1,0 +1,51 @@
+{
+  "idcontrato": "11623631",
+  "nAnuncio": "10331/2025",
+  "TipoAnuncio": "Anúncio de procedimento",
+  "idINCM": "418953989",
+  "tipoContrato": [
+    "Aquisição de bens móveis"
+  ],
+  "idprocedimento": "7569044",
+  "tipoprocedimento": "Concurso público",
+  "objectoContrato": "CPUB004DTEDGA2025 - Aquisição de Viaturas Ligeiras",
+  "descContrato": "CPUB004DTEDGA2025 - Aquisição de Viaturas Ligeiras",
+  "adjudicante": [
+    "507396081 - EMAC - Empresa Municipal de Ambiente de Cascais, E. M., S. A."
+  ],
+  "adjudicatarios": [
+    "500970602 - Renault Portugal, S.A."
+  ],
+  "dataPublicacao": "05/08/2025",
+  "dataCelebracaoContrato": "30/07/2025",
+  "precoContratual": 127206.60,
+  "cpv": [
+    "34144900-7 - Veículos eléctricos"
+  ],
+  "prazoExecucao": 90,
+  "localExecucao": [
+    "Portugal, Lisboa, Cascais"
+  ],
+  "fundamentacao": "Artigo 20.º, n.º 1, alínea a) do Código dos Contratos Públicos",
+  "ProcedimentoCentralizado": "Não",
+  "numAcordoQuadro": "NULL",
+  "DescrAcordoQuadro": "NULL",
+  "precoBaseProcedimento": 419000.0,
+  "dataDecisaoAdjudicacao": "02/07/2025",
+  "dataFechoContrato": "",
+  "PrecoTotalEfetivo": 0.0,
+  "regime": "Código dos Contratos Públicos (DL111-B/2017) e Lei n.º 30/2021, de 21.05",
+  "justifNReducEscrContrato": null,
+  "tipoFimContrato": "",
+  "CritMateriais": "Não",
+  "concorrentes": [
+    "500035121-Caetano Formula, S.A.",
+    "500970602-RENAULT PORTUGAL SA",
+    "500239037-Toyota Caetano Portugal, SA"
+  ],
+  "linkPecasProc": "https://www.acingov.pt/acingovprod/2/zonaPublica/zona_publica_c/donwloadProcedurePiece/ODg3MTc1",
+  "Observacoes": "O pagamento dos bens será efetuado por Entidade Locadora...",
+  "ContratEcologico": "Não",
+  "Ano": 2025,
+  "fundamentAjusteDireto": ""
+}
