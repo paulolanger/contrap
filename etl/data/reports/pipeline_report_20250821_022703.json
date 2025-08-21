@@ -1,0 +1,27 @@
+{
+  "start_time": "2025-08-21T02:26:36.381447",
+  "end_time": "2025-08-21T02:27:03.787851",
+  "duration_seconds": 27.406404,
+  "status": "partial",
+  "fetched": {
+    "announcements": 27756
+  },
+  "validated": {
+    "announcements": 27482
+  },
+  "processed": {
+    "announcements": 26344,
+    "contracts": 0,
+    "modifications": 0,
+    "entities": 0,
+    "errors": 0
+  },
+  "errors": {
+    "invalid_announcements": 274
+  },
+  "total_fetched": 27756,
+  "total_validated": 27482,
+  "total_processed": 26344,
+  "total_errors": 274,
+  "timestamp": "20250821_022703"
+}

@@ -1,0 +1,24 @@
+{
+  "start_time": "2025-08-21T02:03:23.419993",
+  "end_time": "2025-08-21T02:03:27.930878",
+  "duration_seconds": 4.510885,
+  "status": "failed",
+  "fetched": {},
+  "validated": {
+    "announcements": 21780,
+    "contracts": 137790,
+    "modifications": 0
+  },
+  "processed": {},
+  "errors": {
+    "invalid_announcements": 10,
+    "invalid_contracts": 2,
+    "process_critical": 1,
+    "pipeline_critical": 1
+  },
+  "total_fetched": 0,
+  "total_validated": 159570,
+  "total_processed": 0,
+  "total_errors": 14,
+  "timestamp": "20250821_020327"
+}
