@@ -1,0 +1,27 @@
+{
+  "start_time": "2025-08-20T23:12:20.154837",
+  "end_time": "2025-08-20T23:14:10.046212",
+  "duration_seconds": 109.891375,
+  "status": "partial",
+  "fetched": {
+    "contracts": 137792
+  },
+  "validated": {
+    "contracts": 0
+  },
+  "processed": {
+    "announcements": 0,
+    "contracts": 0,
+    "modifications": 0,
+    "entities": 0,
+    "errors": 0
+  },
+  "errors": {
+    "invalid_contracts": 137792
+  },
+  "total_fetched": 137792,
+  "total_validated": 0,
+  "total_processed": 0,
+  "total_errors": 137792,
+  "timestamp": "20250820_231410"
+}

@@ -178,11 +178,13 @@ class DataProcessor:
         Returns:
             Announcement ID if successful, None otherwise
         """
+        from .field_mappings import extract_announcement_id, extract_entity_nif
+        
         # Clean the data
         announcement_data = self.validator.clean_null_values(announcement_data)
         
-        # Skip if already processed
-        announcement_id = announcement_data.get('idAnuncio')
+        # Extract announcement ID (can be nAnuncio or idAnuncio)
+        announcement_id = extract_announcement_id(announcement_data)
         if not announcement_id or announcement_id in self.processed_announcements:
             return None
         
@@ -207,22 +209,34 @@ class DataProcessor:
             publication_date = self.validator.normalize_date(
                 announcement_data.get('dataPublicacao')
             )
-            submission_deadline = self.validator.normalize_date(
-                announcement_data.get('dataFimProposta')
-            )
-            opening_date = self.validator.normalize_date(
-                announcement_data.get('dataAberturaPropostas')
-            )
             
-            # Parse amount
+            # Calculate submission deadline from PrazoPropostas (days)
+            submission_deadline = None
+            prazo_dias = announcement_data.get('PrazoPropostas')
+            if prazo_dias and publication_date:
+                try:
+                    from datetime import timedelta
+                    submission_deadline = publication_date + timedelta(days=int(prazo_dias))
+                except (ValueError, TypeError):
+                    submission_deadline = None
+            
+            # These fields are not provided by the API
+            opening_date = None  # API doesn't provide dataAberturaPropostas
+            
+            # Parse amount (can be PrecoBase or precoBase)
+            price_field = 'PrecoBase' if 'PrecoBase' in announcement_data else 'precoBase'
             base_price = self.validator.normalize_amount(
-                announcement_data.get('precoBase')
+                announcement_data.get(price_field)
             )
             
-            # Normalize contract type
-            contract_type = self.validator.normalize_contract_type(
-                announcement_data.get('tipoContrato')
-            )
+            # Normalize contract type (can be tiposContrato array or tipoContrato string)
+            contract_types = announcement_data.get('tiposContrato', [])
+            if contract_types and isinstance(contract_types, list) and len(contract_types) > 0:
+                contract_type = self.validator.normalize_contract_type(contract_types[0])
+            else:
+                contract_type = self.validator.normalize_contract_type(
+                    announcement_data.get('tipoContrato')
+                )
             
             # Insert announcement
             db_announcement_id = await conn.fetchval(
@@ -245,28 +259,28 @@ class DataProcessor:
                 """,
                 announcement_id,
                 entity_id,
-                announcement_data.get('objetoContrato'),
-                announcement_data.get('descricao'),
+                announcement_data.get('descricaoAnuncio') or announcement_data.get('objetoContrato'),  # title
+                announcement_data.get('descricao') or announcement_data.get('descricaoAnuncio'),  # description
                 contract_type,
-                announcement_data.get('tipoProcedimento'),
+                announcement_data.get('modeloAnuncio'),  # This is the actual procedure type field
                 base_price,
                 publication_date,
                 submission_deadline,
                 opening_date,
                 announcement_data.get('estado', 'active'),
                 announcement_data.get('url'),
-                announcement_data.get('referencia'),
-                announcement_data.get('localExecucao'),
-                announcement_data.get('codigoNuts'),
-                announcement_data.get('prazoExecucao'),
+                None,  # reference - not provided by API
+                None,  # location - not provided in announcements
+                None,  # nuts_code - not provided by API
+                None,  # duration_months - prazoExecucao not in announcements
                 announcement_data.get('acordoQuadro', False),
                 announcement_data.get('sistemaAquisicaoDinamico', False),
                 announcement_data.get('permitePropostasEletronicas', False),
                 announcement_data.get('obrigaPropostasEletronicas', False)
             )
             
-            # Process CPV codes
-            cpv_list = announcement_data.get('cpvs', [])
+            # Process CPV codes (can be CPVs or cpvs)
+            cpv_list = announcement_data.get('CPVs', announcement_data.get('cpvs', []))
             if cpv_list and db_announcement_id:
                 cpv_data = self.validator.extract_cpv_codes(cpv_list)
                 for cpv in cpv_data:
@@ -299,11 +313,13 @@ class DataProcessor:
         Returns:
             Contract ID if successful, None otherwise
         """
+        from .field_mappings import extract_contract_id, extract_contract_entity_nif, extract_contract_supplier_nif
+        
         # Clean the data
         contract_data = self.validator.clean_null_values(contract_data)
         
-        # Skip if already processed
-        contract_id = contract_data.get('idContrato')
+        # Extract contract ID (can be idContrato or idcontrato)
+        contract_id = extract_contract_id(contract_data)
         if not contract_id or contract_id in self.processed_contracts:
             return None
         
@@ -318,30 +334,45 @@ class DataProcessor:
             entity_id = None
             supplier_id = None
             
-            # Contracting entity
-            entity_nif = contract_data.get('nifEntidade')
+            # Contracting entity - extract NIF from adjudicante field if needed
+            entity_nif = extract_contract_entity_nif(contract_data)
             if entity_nif:
+                # Extract entity name from adjudicante field
+                entity_name = None
+                if 'adjudicante' in contract_data:
+                    adj = contract_data['adjudicante']
+                    if isinstance(adj, list) and len(adj) > 0 and ' - ' in adj[0]:
+                        entity_name = adj[0].split(' - ', 1)[1].strip()
+                
                 entity_data = {
                     'nif': entity_nif,
-                    'designacao': contract_data.get('designacaoEntidade')
+                    'designacao': entity_name or contract_data.get('designacaoEntidade')
                 }
                 entity_id = await self.process_entity(entity_data, conn)
             
-            # Supplier entity
-            supplier_nif = contract_data.get('nifAdjudicatario')
+            # Supplier entity - extract from adjudicatarios field if needed
+            supplier_nif = extract_contract_supplier_nif(contract_data)
             if supplier_nif:
+                # Extract supplier name from adjudicatarios field
+                supplier_name = None
+                if 'adjudicatarios' in contract_data:
+                    adj = contract_data['adjudicatarios']
+                    if isinstance(adj, list) and len(adj) > 0 and ' - ' in adj[0]:
+                        supplier_name = adj[0].split(' - ', 1)[1].strip()
+                
                 supplier_data = {
                     'nif': supplier_nif,
-                    'designacao': contract_data.get('designacaoAdjudicatario')
+                    'designacao': supplier_name or contract_data.get('designacaoAdjudicatario')
                 }
                 supplier_id = await self.process_entity(supplier_data, conn)
             
-            # Link announcement if exists
+            # Link announcement if exists (check both idAnuncio and nAnuncio)
             announcement_id = None
-            if contract_data.get('idAnuncio'):
+            ann_ref = contract_data.get('idAnuncio') or contract_data.get('nAnuncio')
+            if ann_ref:
                 announcement_id = await conn.fetchval(
                     "SELECT id FROM announcements WHERE external_id = $1",
-                    contract_data.get('idAnuncio')
+                    str(ann_ref)
                 )
             
             # Parse dates
@@ -363,10 +394,12 @@ class DataProcessor:
                 contract_data.get('precoContratual')
             )
             
-            # Normalize contract type
-            contract_type = self.validator.normalize_contract_type(
-                contract_data.get('tipoContrato')
-            )
+            # Normalize contract type (handle list or string)
+            contract_types = contract_data.get('tipoContrato', [])
+            if isinstance(contract_types, list) and len(contract_types) > 0:
+                contract_type = self.validator.normalize_contract_type(contract_types[0])
+            else:
+                contract_type = self.validator.normalize_contract_type(contract_types)
             
             # Insert contract
             db_contract_id = await conn.fetchval(
@@ -391,10 +424,10 @@ class DataProcessor:
                 announcement_id,
                 entity_id,
                 supplier_id,
-                contract_data.get('objetoContrato'),
-                contract_data.get('descricao'),
+                contract_data.get('objectoContrato') or contract_data.get('objetoContrato'),
+                contract_data.get('descContrato') or contract_data.get('descricao'),
                 contract_type,
-                contract_data.get('tipoProcedimento'),
+                contract_data.get('tipoprocedimento') or contract_data.get('tipoProcedimento'),  # Handle case variations
                 contract_value,
                 publication_date,
                 signature_date,
@@ -403,14 +436,15 @@ class DataProcessor:
                 contract_data.get('estado', 'active'),
                 contract_data.get('url'),
                 contract_data.get('referencia'),
-                contract_data.get('localExecucao'),
+                # Handle localExecucao which can be a list
+                ', '.join(contract_data.get('localExecucao', [])) if isinstance(contract_data.get('localExecucao'), list) else contract_data.get('localExecucao'),
                 contract_data.get('codigoNuts'),
                 contract_data.get('acordoQuadro', False),
                 contract_data.get('observacoes')
             )
             
-            # Process CPV codes
-            cpv_list = contract_data.get('cpvs', [])
+            # Process CPV codes (can be cpv or cpvs)
+            cpv_list = contract_data.get('cpv', contract_data.get('cpvs', []))
             if cpv_list and db_contract_id:
                 cpv_data = self.validator.extract_cpv_codes(cpv_list)
                 for cpv in cpv_data:
@@ -598,50 +632,53 @@ class DataProcessor:
         }
         
         async with self.pool.acquire() as conn:
-            async with conn.transaction():
-                # Process entities first
-                if entities:
-                    for entity in entities:
-                        try:
+            # Process entities first (without transaction for batch)
+            if entities:
+                for entity in entities:
+                    try:
+                        async with conn.transaction():
                             entity_id = await self.process_entity(entity, conn)
                             if entity_id:
                                 results['entities'] += 1
-                        except Exception as e:
-                            logger.error(f"Error processing entity: {e}")
-                            results['errors'] += 1
+                    except Exception as e:
+                        logger.error(f"Error processing entity: {e}")
+                        results['errors'] += 1
                 
-                # Process announcements
-                if announcements:
-                    for announcement in announcements:
-                        try:
+            # Process announcements (each in its own transaction)
+            if announcements:
+                for announcement in announcements:
+                    try:
+                        async with conn.transaction():
                             ann_id = await self.process_announcement(announcement, conn)
                             if ann_id:
                                 results['announcements'] += 1
-                        except Exception as e:
-                            logger.error(f"Error processing announcement: {e}")
-                            results['errors'] += 1
+                    except Exception as e:
+                        logger.error(f"Error processing announcement: {e}")
+                        results['errors'] += 1
                 
-                # Process contracts
-                if contracts:
-                    for contract in contracts:
-                        try:
+            # Process contracts (each in its own transaction)
+            if contracts:
+                for contract in contracts:
+                    try:
+                        async with conn.transaction():
                             contract_id = await self.process_contract(contract, conn)
                             if contract_id:
                                 results['contracts'] += 1
-                        except Exception as e:
-                            logger.error(f"Error processing contract: {e}")
-                            results['errors'] += 1
+                    except Exception as e:
+                        logger.error(f"Error processing contract: {e}")
+                        results['errors'] += 1
                 
-                # Process modifications
-                if modifications:
-                    for modification in modifications:
-                        try:
+            # Process modifications (each in its own transaction)
+            if modifications:
+                for modification in modifications:
+                    try:
+                        async with conn.transaction():
                             mod_id = await self.process_contract_modification(modification, conn)
                             if mod_id:
                                 results['modifications'] += 1
-                        except Exception as e:
-                            logger.error(f"Error processing modification: {e}")
-                            results['errors'] += 1
+                    except Exception as e:
+                        logger.error(f"Error processing modification: {e}")
+                        results['errors'] += 1
         
         logger.info(f"Batch processing complete: {results}")
         return results

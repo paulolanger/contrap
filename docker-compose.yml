@@ -49,6 +49,32 @@ services:
     networks:
       - contrap_network
 
+  etl:
+    build: ./etl
+    container_name: contrap_etl
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: contrap
+      DB_USER: contrap_user
+      DB_PASSWORD: ${DB_PASSWORD:-contrap_dev_password}
+      API_BASE_URL: https://www.base.gov.pt/APIBase2
+      API_ACCESS_TOKEN: Nmq28lKgTbr05RaFOJNf
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./etl/data:/app/data
+      - ./etl/logs:/app/logs
+      - ./database/schema_en.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - contrap_network
+    profiles:
+      - etl
+
 volumes:
   postgres_data:
   redis_data:

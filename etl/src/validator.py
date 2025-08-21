@@ -392,36 +392,56 @@ class DataValidator:
         Returns:
             Tuple of (is_valid, list_of_errors)
         """
+        from .field_mappings import extract_announcement_id, extract_entity_nif
+        
         errors = []
         
         # Clean null values first
         announcement = DataValidator.clean_null_values(announcement)
         
-        # Required fields
-        required_fields = ['idAnuncio', 'nifEntidade', 'dataPublicacao']
-        for field in required_fields:
-            if not announcement.get(field):
-                errors.append(f"Missing required field: {field}")
+        # Check for announcement ID (can be in various fields)
+        announcement_id = extract_announcement_id(announcement)
+        if not announcement_id:
+            errors.append("Missing announcement ID (nAnuncio/idAnuncio)")
         
-        # Validate NIF
-        if announcement.get('nifEntidade'):
-            is_valid, _ = DataValidator.validate_nif(announcement['nifEntidade'])
+        # Check for entity NIF
+        entity_nif = extract_entity_nif(announcement)
+        if not entity_nif:
+            errors.append("Missing entity NIF (nifEntidade)")
+        else:
+            # Validate NIF
+            is_valid, _ = DataValidator.validate_nif(entity_nif)
             if not is_valid:
-                errors.append(f"Invalid NIF: {announcement['nifEntidade']}")
+                errors.append(f"Invalid NIF: {entity_nif}")
         
-        # Validate dates
-        date_fields = ['dataPublicacao', 'dataFimProposta', 'dataAberturaPropostas']
-        for field in date_fields:
+        # Check for publication date
+        if not announcement.get('dataPublicacao'):
+            errors.append("Missing required field: dataPublicacao")
+        else:
+            # Validate date format
+            date_val = DataValidator.normalize_date(announcement['dataPublicacao'])
+            if not date_val:
+                errors.append(f"Invalid date format in dataPublicacao: {announcement['dataPublicacao']}")
+        
+        # Validate other dates if present
+        optional_date_fields = ['dataFimProposta', 'dataAberturaPropostas']
+        for field in optional_date_fields:
             if announcement.get(field):
                 date_val = DataValidator.normalize_date(announcement[field])
                 if not date_val:
                     errors.append(f"Invalid date format in {field}: {announcement[field]}")
         
-        # Validate amount if present
-        if announcement.get('precoBase'):
-            amount = DataValidator.normalize_amount(announcement['precoBase'])
+        # Validate amount if present (can be PrecoBase or precoBase)
+        price_field = None
+        if 'PrecoBase' in announcement:
+            price_field = 'PrecoBase'
+        elif 'precoBase' in announcement:
+            price_field = 'precoBase'
+        
+        if price_field:
+            amount = DataValidator.normalize_amount(announcement[price_field])
             if amount and amount < 0:
-                errors.append(f"Negative price base: {announcement['precoBase']}")
+                errors.append(f"Negative price base: {announcement[price_field]}")
         
         return len(errors) == 0, errors
     
@@ -436,24 +456,31 @@ class DataValidator:
         Returns:
             Tuple of (is_valid, list_of_errors)
         """
+        from .field_mappings import extract_contract_id, extract_contract_entity_nif
+        
         errors = []
         
         # Clean null values first
         contract = DataValidator.clean_null_values(contract)
         
-        # Required fields
-        required_fields = ['idContrato', 'nifEntidade', 'dataPublicacao']
-        for field in required_fields:
-            if not contract.get(field):
-                errors.append(f"Missing required field: {field}")
+        # Check for contract ID (can be in various fields)
+        contract_id = extract_contract_id(contract)
+        if not contract_id:
+            errors.append("Missing contract ID (idContrato/idcontrato)")
         
-        # Validate NIFs
-        nif_fields = ['nifEntidade', 'nifAdjudicatario']
-        for field in nif_fields:
-            if contract.get(field):
-                is_valid, _ = DataValidator.validate_nif(contract[field])
-                if not is_valid:
-                    errors.append(f"Invalid NIF in {field}: {contract[field]}")
+        # Check for entity NIF (might be in adjudicante field)
+        entity_nif = extract_contract_entity_nif(contract)
+        if not entity_nif:
+            errors.append("Missing entity NIF (nifEntidade or adjudicante)")
+        else:
+            # Validate NIF
+            is_valid, _ = DataValidator.validate_nif(entity_nif)
+            if not is_valid:
+                errors.append(f"Invalid NIF: {entity_nif}")
+        
+        # Check for publication date
+        if not contract.get('dataPublicacao'):
+            errors.append("Missing required field: dataPublicacao")
         
         # Validate dates
         date_fields = ['dataPublicacao', 'dataCelebracaoContrato', 'dataInicioExecucao', 'dataFimExecucao']
