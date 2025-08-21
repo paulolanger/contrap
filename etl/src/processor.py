@@ -405,8 +405,10 @@ class DataProcessor:
             contract_types = contract_data.get('tipoContrato', [])
             if isinstance(contract_types, list) and len(contract_types) > 0:
                 contract_type = self.validator.normalize_contract_type(contract_types[0])
-            else:
+            elif contract_types and not isinstance(contract_types, list):
                 contract_type = self.validator.normalize_contract_type(contract_types)
+            else:
+                contract_type = None
             
             # Insert contract
             db_contract_id = await conn.fetchval(

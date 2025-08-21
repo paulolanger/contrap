@@ -138,7 +138,7 @@ class DataValidator:
         Returns:
             Decimal amount or None if invalid
         """
-        if not amount_str or amount_str in ["NULL", "null", "N/A", ""]:
+        if not amount_str or amount_str in ["NULL", "null", "N/A", "", "Inexistente", "inexistente"]:
             return None
         
         try:
