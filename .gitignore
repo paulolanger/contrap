@@ -65,6 +65,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+**/venv/
+**/env/
+etl/venv/
 .spyderproject
 .spyproject
 .ropeproject
