@@ -210,23 +210,30 @@ class DataProcessor:
                 announcement_data.get('dataPublicacao')
             )
             
-            # Calculate submission deadline from PrazoPropostas (days)
+            # Calculate submission deadline from prazoPropostas (days)
             submission_deadline = None
-            prazo_dias = announcement_data.get('PrazoPropostas')
+            prazo_dias = announcement_data.get('prazoPropostas') or announcement_data.get('PrazoPropostas')
             if prazo_dias and publication_date:
                 try:
                     from datetime import timedelta
-                    submission_deadline = publication_date + timedelta(days=int(prazo_dias))
-                except (ValueError, TypeError):
+                    # Handle string or numeric values
+                    if isinstance(prazo_dias, str):
+                        prazo_dias = int(prazo_dias.replace(' dias', '').strip())
+                    else:
+                        prazo_dias = int(prazo_dias)
+                    submission_deadline = publication_date + timedelta(days=prazo_dias)
+                except (ValueError, TypeError) as e:
+                    logger.debug(f"Could not calculate submission deadline: {e}")
                     submission_deadline = None
             
             # These fields are not provided by the API
             opening_date = None  # API doesn't provide dataAberturaPropostas
             
-            # Parse amount (can be PrecoBase or precoBase)
-            price_field = 'PrecoBase' if 'PrecoBase' in announcement_data else 'precoBase'
+            # Parse amount (handle case variations)
             base_price = self.validator.normalize_amount(
-                announcement_data.get(price_field)
+                announcement_data.get('precoBase') or 
+                announcement_data.get('PrecoBase') or 
+                announcement_data.get('valorBase')
             )
             
             # Normalize contract type (can be tiposContrato array or tipoContrato string)
@@ -262,17 +269,17 @@ class DataProcessor:
                 announcement_data.get('descricaoAnuncio') or announcement_data.get('objetoContrato'),  # title
                 announcement_data.get('descricao') or announcement_data.get('descricaoAnuncio'),  # description
                 contract_type,
-                announcement_data.get('modeloAnuncio'),  # This is the actual procedure type field
+                announcement_data.get('tipoProcedimento') or announcement_data.get('tipoprocedimento') or announcement_data.get('modeloAnuncio'),  # procedure_type
                 base_price,
                 publication_date,
                 submission_deadline,
                 opening_date,
                 announcement_data.get('estado', 'active'),
                 announcement_data.get('url'),
-                None,  # reference - not provided by API
-                None,  # location - not provided in announcements
-                None,  # nuts_code - not provided by API
-                None,  # duration_months - prazoExecucao not in announcements
+                announcement_data.get('referencia'),  # reference
+                announcement_data.get('localExecucao'),  # location
+                announcement_data.get('codigoNuts'),  # nuts_code
+                self._parse_duration_months(announcement_data.get('prazoExecucao')),  # duration_months
                 announcement_data.get('acordoQuadro', False),
                 announcement_data.get('sistemaAquisicaoDinamico', False),
                 announcement_data.get('permitePropostasEletronicas', False),
@@ -580,6 +587,45 @@ class DataProcessor:
             
         except Exception as e:
             logger.error(f"Error processing contract modification: {str(e)}")
+            return None
+    
+    def _parse_duration_months(self, prazo_str: Optional[str]) -> Optional[int]:
+        """
+        Parse duration string to months.
+        
+        Args:
+            prazo_str: Duration string like "12 meses", "2 anos", "90 dias"
+        
+        Returns:
+            Duration in months or None
+        """
+        if not prazo_str:
+            return None
+        
+        try:
+            prazo_str = str(prazo_str).lower().strip()
+            
+            # Try to extract number
+            import re
+            number_match = re.search(r'(\d+)', prazo_str)
+            if not number_match:
+                return None
+            
+            number = int(number_match.group(1))
+            
+            # Convert based on unit
+            if 'ano' in prazo_str:
+                return number * 12
+            elif 'mes' in prazo_str or 'mês' in prazo_str:
+                return number
+            elif 'dia' in prazo_str:
+                return max(1, number // 30)  # Approximate days to months
+            elif 'semana' in prazo_str:
+                return max(1, number * 7 // 30)  # Approximate weeks to months
+            else:
+                # If no unit specified, assume months
+                return number
+        except (ValueError, AttributeError):
             return None
     
     async def _insert_cpv_code(self, cpv: Dict[str, str], conn: Connection):
