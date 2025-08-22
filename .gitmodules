@@ -1,0 +1,9 @@
+[submodule "services/etl"]
+	path = services/etl
+	url = https://github.com/paulolanger/contrap-etl.git
+[submodule "services/backend"]
+	path = services/backend
+	url = https://github.com/paulolanger/contrap-backend.git
+[submodule "services/frontend"]
+	path = services/frontend
+	url = https://github.com/paulolanger/contrap-frontend.git

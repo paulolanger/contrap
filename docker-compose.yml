@@ -50,7 +50,7 @@ services:
       - contrap_network
 
   etl:
-    build: ./etl
+    build: ./services/etl
     container_name: contrap_etl
     environment:
       DB_HOST: postgres
@@ -62,8 +62,8 @@ services:
       API_ACCESS_TOKEN: Nmq28lKgTbr05RaFOJNf
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     volumes:
-      - ./etl/data:/app/data
-      - ./etl/logs:/app/logs
+      - ./services/etl/data:/app/data
+      - ./services/etl/logs:/app/logs
       - ./database/schema_en.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     depends_on:
       postgres:
@@ -74,6 +74,42 @@ services:
       - contrap_network
     profiles:
       - etl
+
+  backend:
+    build: ./services/backend
+    container_name: contrap_backend
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgresql://contrap_user:${DB_PASSWORD:-contrap_dev_password}@postgres:5432/contrap
+      REDIS_URL: redis://redis:6379
+      PORT: 4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - contrap_network
+    profiles:
+      - backend
+
+  frontend:
+    build: ./services/frontend
+    container_name: contrap_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: http://backend:4000
+      NEXT_PUBLIC_GRAPHQL_ENDPOINT: http://backend:4000/graphql
+    depends_on:
+      - backend
+    networks:
+      - contrap_network
+    profiles:
+      - frontend
 
 volumes:
   postgres_data:
