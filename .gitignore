@@ -161,6 +161,14 @@ data/archived/*.json
 !data/cache/.gitkeep
 !data/archived/.gitkeep
 
+# ETL Data files (prevent large files)
+etl/data/
+services/etl/data/raw/
+services/etl/data/processed/
+services/etl/data/cache/
+services/etl/data/errors/
+services/etl/data/archived/
+
 # Database
 *.sql
 *.sqlite
