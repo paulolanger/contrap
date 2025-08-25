@@ -34,22 +34,10 @@ services:
     networks:
       - contrap_network
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: contrap_pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@contrap.pt
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
-    ports:
-      - "5050:80"
-    depends_on:
-      - postgres
-    networks:
-      - contrap_network
-
   etl:
     build: ./services/etl
     container_name: contrap_etl
+    restart: unless-stopped
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -62,7 +50,13 @@ services:
     volumes:
       - ./services/etl/data:/app/data
       - ./services/etl/logs:/app/logs
-      - ./database/schema_en.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./services/etl/src:/app/src:ro
+      - ./services/etl/migrations:/app/migrations:ro
+      - ./services/etl/run_etl.py:/app/run_etl.py:ro
+      - ./services/etl/scheduler.py:/app/scheduler.py:ro
+      - ./services/etl/migrate.py:/app/migrate.py:ro
+      - ./services/etl/alembic.ini:/app/alembic.ini:ro
+      - ./database/schema_en.sql:/app/database/schema_en.sql:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,6 +96,8 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       NEXT_PUBLIC_API_URL: http://backend:4000
       NEXT_PUBLIC_GRAPHQL_ENDPOINT: http://backend:4000/graphql
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
     depends_on:
       - backend
     networks:
